@@ -9,13 +9,25 @@ public class Company {
 
     private static final int NR_OF_SOFTWARE_DEVELOPER = 6;
     private static final int NR_OF_USER = 10;
+    private static final int NR_OF_DEVELOPER_SEATS = 3;
     private Jaap jaap;
     private SoftwareDeveloper[] softwareDevelopers;
     private User[] users;
-    private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation,
-            softwareConsultationInvitation, beginSoftwareConsultation;
+    private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation;
+    private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUSerConsult;
 
     public Company() {
+
+        reportProblem = new Semaphore(0, true);
+        inviteUser  = new Semaphore(0, true);
+        reportArrival = new Semaphore(0, true);
+        userConsultationInvitation = new Semaphore(0, true);
+        beginUserConsultation = new Semaphore(0, true);
+        beginSoftwareConsultation = new Semaphore(0, true);
+        softwareConsultationInvitation = new Semaphore(0, true);
+        //limited amount of developers seats for a user consultation, and adt least 3 for the developers onsultation
+        inviteDeveloperForDeveloperConsult = new Semaphore(NR_OF_DEVELOPER_SEATS, true);
+        inviteDeveloperForUSerConsult = new Semaphore(0, true);
 
         softwareDevelopers = new SoftwareDeveloper[NR_OF_SOFTWARE_DEVELOPER];
         users = new User[NR_OF_USER];
@@ -29,6 +41,7 @@ public class Company {
             users[i] = new User("User " + i, i);
             users[i].start();
         }
+
         jaap = new Jaap();
         jaap.start();
     }
