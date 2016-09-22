@@ -13,7 +13,7 @@ public class Company {
     private SoftwareDeveloper[] softwareDevelopers;
     private User[] users;
     private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation,
-            softwareConsultationInvitation, beginSoftwareConsultion;
+            softwareConsultationInvitation, beginSoftwareConsultation;
 
     public Company() {
 
@@ -65,7 +65,19 @@ public class Company {
 
         @Override
         public void run() {
+            try {
+                //user reports the problem
+                reportProblem.release();
+                //user waits for the invitation
+                inviteUser.acquire();
+                //when he recieved an invitation he travels to the company and reports his arrival
+                reportArrival.release();
+                //he then waits for the consultation invitation
+                userConsultationInvitation.acquire();
 
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
