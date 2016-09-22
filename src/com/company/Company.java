@@ -19,7 +19,7 @@ public class Company {
     private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUserConsult;
     private Semaphore developerReportsIn;
 
-    public Company() {
+    Company() {
         reportProblem = new Semaphore(0, true);
         inviteUser = new Semaphore(0, true);
         reportArrival = new Semaphore(0, true);
@@ -27,9 +27,11 @@ public class Company {
         beginUserConsultation = new Semaphore(0, true);
         beginSoftwareConsultation = new Semaphore(0, true);
         softwareConsultationInvitation = new Semaphore(0, true);
+
         //limited amount of developers seats for a user consultation, and adt least 3 for the developers consultation
         inviteDeveloperForDeveloperConsult = new Semaphore(0, true);
         inviteDeveloperForUserConsult = new Semaphore(0, true);
+        developerReportsIn = new Semaphore(0, true);
 
         softwareDevelopers = new SoftwareDeveloper[NR_OF_SOFTWARE_DEVELOPER];
         users = new User[NR_OF_USER];
@@ -48,7 +50,26 @@ public class Company {
         jaap.start();
     }
 
-    class Jaap extends Thread {
+    private class Jaap extends Thread {
+
+        private void ConsultingUser(){
+            try {
+                System.out.println("Jaap is in a user consultation");
+                Thread.sleep((int) (Math.random() * 1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void ConsultingDeveloper(){
+            try {
+                System.out.println("Jaap is in a Developer consultation");
+                Thread.sleep((int) (Math.random() * 1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         //when jaap has recieved =>three developerReportsIn, he releases the beginDevelopersConsult
         @Override
         public void run() {
@@ -59,12 +80,12 @@ public class Company {
                 inviteUser.release();
                 //when a user reports his arrival at the company, Jaap acquires it
                 reportArrival.acquire();
-                //when everything is ok for the TODO: one developer
+                //when everything is ok for the one developer
                 if (availableDevelopers >= 1) {
                     //TODO: all user acquire this, and ONE developer acquires this
                     inviteDeveloperForUserConsult.release();
                     //Jaap releases the invitation
-                    inviteUser.release();
+                    userConsultationInvitation.release();
                     //Jaap starts the consultation
                     beginUserConsultation.release();
                 }
@@ -81,7 +102,7 @@ public class Company {
         }
     }
 
-    class SoftwareDeveloper extends Thread {
+    private class SoftwareDeveloper extends Thread {
         private int softwareDeveloperId;
 
         //the developer is working
@@ -117,8 +138,9 @@ public class Company {
                         beginSoftwareConsultation.acquire();
                     } else {
                         //if he isn't invited he goes back to work
-                        Work();
+                        developerReportsIn.acquire();
                         availableDevelopers--;
+                        Work();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -129,7 +151,7 @@ public class Company {
     }
 
 
-    class User extends Thread {
+    private class User extends Thread {
         private int userId;
 
         public User(String name, int userId) {
@@ -154,7 +176,7 @@ public class Company {
                 reportProblem.release();
                 //user waits for the invitation
                 inviteUser.acquire();
-                //after acquireing the invitation, he travels to the company
+                //after acquiring the invitation, he travels to the company
                 Travel();
                 //and reports his arrival
                 reportArrival.release();
