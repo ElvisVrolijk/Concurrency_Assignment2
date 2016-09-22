@@ -15,17 +15,18 @@ public class Company {
     private User[] users;
     private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation;
     private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUSerConsult;
+    private Semaphore developerReportsIn;
 
     public Company() {
 
         reportProblem = new Semaphore(0, true);
-        inviteUser  = new Semaphore(0, true);
+        inviteUser = new Semaphore(0, true);
         reportArrival = new Semaphore(0, true);
         userConsultationInvitation = new Semaphore(0, true);
         beginUserConsultation = new Semaphore(0, true);
         beginSoftwareConsultation = new Semaphore(0, true);
         softwareConsultationInvitation = new Semaphore(0, true);
-        //limited amount of developers seats for a user consultation, and adt least 3 for the developers onsultation
+        //limited amount of developers seats for a user consultation, and adt least 3 for the developers consultation
         inviteDeveloperForDeveloperConsult = new Semaphore(NR_OF_DEVELOPER_SEATS, true);
         inviteDeveloperForUSerConsult = new Semaphore(0, true);
 
@@ -50,12 +51,35 @@ public class Company {
 
         @Override
         public void run() {
+            try {
+                //when user releases a problem jaap acquires it
+                reportProblem.acquire();
+                //when the problem is acquired jaap releases the invitation
+                inviteUser.release();
+                //when a user reports his arrival at the company, Jaap acquires it
+                reportArrival.acquire();
+                //when everything is ok for the TODO: one developer
 
+                //Jaap releases the invitation
+                inviteUser.release();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     class SoftwareDeveloper extends Thread {
         private int softwareDeveloperId;
+
+        //the developer is working
+        private void Work() {
+            try {
+                System.out.println(getName() + " is working.");
+                Thread.sleep((int) (Math.random() * 1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
         public SoftwareDeveloper(String name, int softwareDeveloperId) {
             super(name);
@@ -64,9 +88,32 @@ public class Company {
 
         @Override
         public void run() {
+            while (true) {
+                //if there is one software developer available, invite all the users and th developer to the
+                //the developer says he is available for a consultation (doesn't matter which)
+                developerReportsIn.release();
+                //he can either get an invitation or he goes back to work
+                if (inviteDeveloperForUSerConsult.tryAcquire()) {
+                    //TODO: only the first report in is invited, the rest goes back to work
+                    //if he is invited, release begin consultation
+                    beginUserConsultation.release();
+                } else {
+                    //if he isn't invited he goes back to work
+                    Work();
+                }
 
+                if (inviteDeveloperForDeveloperConsult.tryAcquire()) {
+                    //if there are three reports in
+                    //TODO: start the consult
+                } else {
+                    //else if there are no three developers
+                    //they wait for the rest
+
+                }
+            }
         }
     }
+
 
     class User extends Thread {
         private int userId;
@@ -76,6 +123,16 @@ public class Company {
             this.userId = userId;
         }
 
+
+        private void Travel() {
+            try {
+                System.out.println(getName() + " is traveling.");
+                Thread.sleep((int) (Math.random() * 1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         @Override
         public void run() {
             try {
@@ -83,7 +140,9 @@ public class Company {
                 reportProblem.release();
                 //user waits for the invitation
                 inviteUser.acquire();
-                //when he recieved an invitation he travels to the company and reports his arrival
+                //after acquireing the invitation, he travels to the company
+                Travel();
+                //and reports his arrival
                 reportArrival.release();
                 //he then waits for the consultation invitation
                 userConsultationInvitation.acquire();
