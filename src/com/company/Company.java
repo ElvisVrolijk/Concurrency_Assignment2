@@ -7,18 +7,19 @@ import java.util.concurrent.Semaphore;
  */
 public class Company {
 
+    //countdown for developers consult, there have to be at least three
+    private int availableDevelopers = 0;
+
     private static final int NR_OF_SOFTWARE_DEVELOPER = 6;
     private static final int NR_OF_USER = 10;
-    private static final int NR_OF_DEVELOPER_SEATS = 3;
     private Jaap jaap;
     private SoftwareDeveloper[] softwareDevelopers;
     private User[] users;
     private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation;
-    private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUSerConsult;
+    private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUserConsult;
     private Semaphore developerReportsIn;
 
     public Company() {
-
         reportProblem = new Semaphore(0, true);
         inviteUser = new Semaphore(0, true);
         reportArrival = new Semaphore(0, true);
@@ -27,8 +28,8 @@ public class Company {
         beginSoftwareConsultation = new Semaphore(0, true);
         softwareConsultationInvitation = new Semaphore(0, true);
         //limited amount of developers seats for a user consultation, and adt least 3 for the developers consultation
-        inviteDeveloperForDeveloperConsult = new Semaphore(NR_OF_DEVELOPER_SEATS, true);
-        inviteDeveloperForUSerConsult = new Semaphore(0, true);
+        inviteDeveloperForDeveloperConsult = new Semaphore(0, true);
+        inviteDeveloperForUserConsult = new Semaphore(0, true);
 
         softwareDevelopers = new SoftwareDeveloper[NR_OF_SOFTWARE_DEVELOPER];
         users = new User[NR_OF_USER];
@@ -48,7 +49,7 @@ public class Company {
     }
 
     class Jaap extends Thread {
-
+        //when jaap has recieved =>three developerReportsIn, he releases the beginDevelopersConsult
         @Override
         public void run() {
             try {
@@ -59,9 +60,21 @@ public class Company {
                 //when a user reports his arrival at the company, Jaap acquires it
                 reportArrival.acquire();
                 //when everything is ok for the TODO: one developer
+                if (availableDevelopers >= 1) {
+                    //TODO: all user acquire this, and ONE developer acquires this
+                    inviteDeveloperForUserConsult.release();
+                    //Jaap releases the invitation
+                    inviteUser.release();
+                    //Jaap starts the consultation
+                    beginUserConsultation.release();
+                }
+                if (availableDevelopers >= 3) {
+                    //TODO: all available developers acquire this
+                    inviteDeveloperForDeveloperConsult.release();
+                    beginSoftwareConsultation.release();
+                }
 
-                //Jaap releases the invitation
-                inviteUser.release();
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -89,27 +102,28 @@ public class Company {
         @Override
         public void run() {
             while (true) {
-                //if there is one software developer available, invite all the users and th developer to the
-                //the developer says he is available for a consultation (doesn't matter which)
-                developerReportsIn.release();
-                //he can either get an invitation or he goes back to work
-                if (inviteDeveloperForUSerConsult.tryAcquire()) {
-                    //TODO: only the first report in is invited, the rest goes back to work
-                    //if he is invited, release begin consultation
-                    beginUserConsultation.release();
-                } else {
-                    //if he isn't invited he goes back to work
-                    Work();
+                try {
+                    //if there is one software developer available, invite all the users and th developer to the
+                    //the developer says he is available for a consultation (doesn't matter which)
+                    developerReportsIn.release();
+                    availableDevelopers++;
+
+                    if (inviteDeveloperForUserConsult.tryAcquire()) {
+                        //TODO: only the first report in is invited, the rest goes back to work
+                        //if he is invited, release begin consultation
+                        beginUserConsultation.release();
+                    } else if (inviteDeveloperForDeveloperConsult.tryAcquire()) {
+                        //if there are three reports in
+                        beginSoftwareConsultation.acquire();
+                    } else {
+                        //if he isn't invited he goes back to work
+                        Work();
+                        availableDevelopers--;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
-                if (inviteDeveloperForDeveloperConsult.tryAcquire()) {
-                    //if there are three reports in
-                    //TODO: start the consult
-                } else {
-                    //else if there are no three developers
-                    //they wait for the rest
-
-                }
             }
         }
     }
@@ -146,6 +160,8 @@ public class Company {
                 reportArrival.release();
                 //he then waits for the consultation invitation
                 userConsultationInvitation.acquire();
+                //when he is invited the consult starts
+                beginUserConsultation.acquire();
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
