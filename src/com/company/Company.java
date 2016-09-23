@@ -16,8 +16,8 @@ public class Company {
     private SoftwareDeveloper[] softwareDevelopers;
     private User[] users;
     private Semaphore reportProblem, inviteUser, reportArrival, userConsultationInvitation, beginUserConsultation;
-    private Semaphore softwareConsultationInvitation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUserConsult;
-    private Semaphore developerReportsIn;
+    private Semaphore endDeveloperConsultation, beginSoftwareConsultation, inviteDeveloperForDeveloperConsult, inviteDeveloperForUserConsult;
+    private Semaphore developerReportsIn, endUserConsultation, mutex;
 
     Company() {
         reportProblem = new Semaphore(0, true);
@@ -26,12 +26,15 @@ public class Company {
         userConsultationInvitation = new Semaphore(0, true);
         beginUserConsultation = new Semaphore(0, true);
         beginSoftwareConsultation = new Semaphore(0, true);
-        softwareConsultationInvitation = new Semaphore(0, true);
-
+        endDeveloperConsultation = new Semaphore(0, true);
+        endUserConsultation = new Semaphore(0, true);
         //limited amount of developers seats for a user consultation, and adt least 3 for the developers consultation
         inviteDeveloperForDeveloperConsult = new Semaphore(0, true);
         inviteDeveloperForUserConsult = new Semaphore(0, true);
         developerReportsIn = new Semaphore(0, true);
+
+        mutex = new Semaphore(0, true);
+        mutex.release();
 
         softwareDevelopers = new SoftwareDeveloper[NR_OF_SOFTWARE_DEVELOPER];
         users = new User[NR_OF_USER];
@@ -81,18 +84,28 @@ public class Company {
                 //when a user reports his arrival at the company, Jaap acquires it
                 reportArrival.acquire();
                 //when everything is ok for the one developer
-                if (availableDevelopers >= 1) {
+                inviteDeveloperForUserConsult.release();
+                if (availableDevelopers > 0) {
+                    mutex.acquire();
+                    availableDevelopers--;
+                    mutex.release();
                     //TODO: all user acquire this, and ONE developer acquires this
-                    inviteDeveloperForUserConsult.release();
                     //Jaap releases the invitation
                     userConsultationInvitation.release();
                     //Jaap starts the consultation
-                    beginUserConsultation.release();
+                    beginUserConsultation.acquire();
+                    ConsultingUser();
+                    endUserConsultation.release();
                 }
-                if (availableDevelopers >= 3) {
+                inviteDeveloperForDeveloperConsult.release();
+                if (availableDevelopers > 2) {
+                    mutex.acquire();
+                    availableDevelopers = availableDevelopers - 3;
+                    mutex.release();
                     //TODO: all available developers acquire this
-                    inviteDeveloperForDeveloperConsult.release();
-                    beginSoftwareConsultation.release();
+                    beginSoftwareConsultation.acquire();
+                    ConsultingDeveloper();
+                    endDeveloperConsultation.release();
                 }
 
 
@@ -127,21 +140,35 @@ public class Company {
                     //if there is one software developer available, invite all the users and th developer to the
                     //the developer says he is available for a consultation (doesn't matter which)
                     developerReportsIn.release();
+                    System.out.println(getName() + " is available");
+                    mutex.acquire();
                     availableDevelopers++;
+                    mutex.release();
 
-                    if (inviteDeveloperForUserConsult.tryAcquire()) {
+                    if (availableDevelopers > 0) {
                         //TODO: only the first report in is invited, the rest goes back to work
                         //if he is invited, release begin consultation
+                        inviteDeveloperForUserConsult.acquire();
                         beginUserConsultation.release();
-                    } else if (inviteDeveloperForDeveloperConsult.tryAcquire()) {
-                        //if there are three reports in
-                        beginSoftwareConsultation.acquire();
-                    } else {
-                        //if he isn't invited he goes back to work
-                        developerReportsIn.acquire();
+                        mutex.acquire();
                         availableDevelopers--;
-                        Work();
+                        mutex.release();
                     }
+                    if (availableDevelopers > 2) {
+                        //if there are three reports in
+                        inviteDeveloperForDeveloperConsult.acquire();
+                        beginSoftwareConsultation.release();
+                        mutex.acquire();
+                        availableDevelopers = availableDevelopers - 2;
+                        mutex.release();
+                    }
+                    //if he isn't invited he goes back to work
+                    developerReportsIn.acquire();
+                    mutex.acquire();
+                    availableDevelopers--;
+                    mutex.release();
+                    Work();
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -153,12 +180,20 @@ public class Company {
 
     private class User extends Thread {
         private int userId;
+        private boolean problemFound = true;
 
         public User(String name, int userId) {
             super(name);
             this.userId = userId;
         }
 
+        private void JustLive() {
+            try {
+                Thread.sleep((int) (Math.random() * 1000));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
         private void Travel() {
             try {
@@ -172,18 +207,26 @@ public class Company {
         @Override
         public void run() {
             try {
-                //user reports the problem
-                reportProblem.release();
-                //user waits for the invitation
-                inviteUser.acquire();
-                //after acquiring the invitation, he travels to the company
-                Travel();
-                //and reports his arrival
-                reportArrival.release();
-                //he then waits for the consultation invitation
-                userConsultationInvitation.acquire();
-                //when he is invited the consult starts
-                beginUserConsultation.acquire();
+                JustLive();
+
+                if (problemFound) {
+                    System.out.println(getName() + " found a problem.");
+                    //user reports the problem
+                    reportProblem.release();
+                    //user waits for the invitation
+                    inviteUser.acquire();
+                    //after acquiring the invitation, he travels to the company
+                    Travel();
+                    //and reports his arrival
+                    reportArrival.release();
+                    //he then waits for the consultation invitation
+                    userConsultationInvitation.acquire();
+                    //when he is invited the consult starts
+                    beginUserConsultation.release();
+                    endUserConsultation.acquire();
+                    problemFound = false;
+                    System.out.println(getName() + "'s was solved.");
+                }
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
