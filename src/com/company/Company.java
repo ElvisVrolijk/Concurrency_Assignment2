@@ -30,8 +30,8 @@ public class Company {
         endUserConsultation = new Semaphore(0, true);
         developerReportsOut = new Semaphore(0, true);
         //limited amount of developers seats for a user consultation, and adt least 3 for the developers consultation
-        inviteDeveloperForDeveloperConsult = new Semaphore(0, true);
-        inviteDeveloperForUserConsult = new Semaphore(0, true);
+        inviteDeveloperForDeveloperConsult = new Semaphore(3, true);
+        inviteDeveloperForUserConsult = new Semaphore(1, true);
         developerReportsIn = new Semaphore(0, true);
 
         mutex = new Semaphore(0, true);
@@ -84,11 +84,9 @@ public class Company {
                     //when the problem is acquired jaap releases the invitation
                     inviteUser.release();
                     //when a user reports his arrival at the company, Jaap acquires it
-                    reportArrival.acquire();
 
-                    if (availableDevelopers > 0 && availableDevelopers < 2) {
+                    if (reportArrival.tryAcquire() && beginUserConsultation.tryAcquire()) {
                         //when everything is ok for the one developer
-                        inviteDeveloperForUserConsult.release();
                         mutex.acquire();
                         availableDevelopers--;
                         mutex.release();
@@ -96,13 +94,12 @@ public class Company {
                         //Jaap releases the invitation
                         userConsultationInvitation.release();
                         //Jaap starts the consultation
-                        beginUserConsultation.acquire();
                         ConsultingUser();
                         endUserConsultation.release();
                         developerReportsOut.release();
                     }
 
-                    if (availableDevelopers > 2) {
+                    if (beginSoftwareConsultation.tryAcquire() && inviteDeveloperForDeveloperConsult.availablePermits() == 0) {
                         inviteDeveloperForDeveloperConsult.release();
                         mutex.acquire();
                         availableDevelopers = 0;
@@ -150,10 +147,8 @@ public class Company {
                     availableDevelopers++;
                     mutex.release();
 
-                    if (availableDevelopers > 0 && availableDevelopers < 2) {
-                        //TODO: only the first report in is invited, the rest goes back to work
+                    if (inviteDeveloperForUserConsult.tryAcquire()) {
                         //if he is invited, release begin consultation
-                        inviteDeveloperForUserConsult.acquire();
                         System.out.println(getName() + " has been invited for a USER consultation");
                         beginUserConsultation.release();
                         System.out.println(getName() + " has started in a USER consultation");
@@ -162,9 +157,8 @@ public class Company {
                         mutex.release();
                         developerReportsOut.acquire();
                     }
-                    if (availableDevelopers > 2) {
+                    if (inviteDeveloperForDeveloperConsult.tryAcquire()) {
                         //if there are three reports in
-                        inviteDeveloperForDeveloperConsult.acquire();
                         System.out.println(getName() + " was invited for a DEVELOPERS consultation");
                         beginSoftwareConsultation.release();
                         System.out.println(getName() + " has started in a DEVELOPERS consultation");
