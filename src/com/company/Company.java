@@ -55,7 +55,7 @@ public class Company {
 
     private class Jaap extends Thread {
 
-        private void ConsultingUser(){
+        private void ConsultingUser() {
             try {
                 System.out.println("Jaap is in a user consultation");
                 Thread.sleep((int) (Math.random() * 1000));
@@ -64,7 +64,7 @@ public class Company {
             }
         }
 
-        private void ConsultingDeveloper(){
+        private void ConsultingDeveloper() {
             try {
                 System.out.println("Jaap is in a Developer consultation");
                 Thread.sleep((int) (Math.random() * 1000));
@@ -73,11 +73,11 @@ public class Company {
             }
         }
 
-        //when jaap has recieved =>three developerReportsIn, he releases the beginDevelopersConsult
+        //when jaap has received =>three developerReportsIn, he releases the beginDevelopersConsult
         @Override
         public void run() {
             try {
-                //when user releases a problem jaap acquires it
+                //when user releases a problem Jaap acquires it
                 reportProblem.acquire();
                 //when the problem is acquired jaap releases the invitation
                 inviteUser.release();
@@ -145,11 +145,12 @@ public class Company {
                     availableDevelopers++;
                     mutex.release();
 
-                    if (availableDevelopers > 0) {
+                    if (availableDevelopers > 0 && availableDevelopers < 2) {
                         //TODO: only the first report in is invited, the rest goes back to work
                         //if he is invited, release begin consultation
                         inviteDeveloperForUserConsult.acquire();
                         beginUserConsultation.release();
+                        System.out.println(getName() + " has started in a user consultation");
                         mutex.acquire();
                         availableDevelopers--;
                         mutex.release();
@@ -158,6 +159,7 @@ public class Company {
                         //if there are three reports in
                         inviteDeveloperForDeveloperConsult.acquire();
                         beginSoftwareConsultation.release();
+                        System.out.println(getName() + " has started in a developer consultation");
                         mutex.acquire();
                         availableDevelopers = availableDevelopers - 2;
                         mutex.release();
@@ -215,14 +217,17 @@ public class Company {
                     reportProblem.release();
                     //user waits for the invitation
                     inviteUser.acquire();
+                    System.out.println("Jaap has invited the user");
                     //after acquiring the invitation, he travels to the company
                     Travel();
                     //and reports his arrival
                     reportArrival.release();
+                    System.out.println(getName() + " has reported his arrival");
                     //he then waits for the consultation invitation
                     userConsultationInvitation.acquire();
                     //when he is invited the consult starts
                     beginUserConsultation.release();
+                    System.out.println(getName() + " has started a consultation");
                     endUserConsultation.acquire();
                     problemFound = false;
                     System.out.println(getName() + "'s was solved.");
