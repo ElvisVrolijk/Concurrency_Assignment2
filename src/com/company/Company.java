@@ -154,8 +154,9 @@ public class Company {
                         //TODO: only the first report in is invited, the rest goes back to work
                         //if he is invited, release begin consultation
                         inviteDeveloperForUserConsult.acquire();
+                        System.out.println(getName() + " has been invited for a USER consultation");
                         beginUserConsultation.release();
-                        System.out.println(getName() + " has started in a user consultation");
+                        System.out.println(getName() + " has started in a USER consultation");
                         mutex.acquire();
                         availableDevelopers--;
                         mutex.release();
@@ -164,8 +165,9 @@ public class Company {
                     if (availableDevelopers > 2) {
                         //if there are three reports in
                         inviteDeveloperForDeveloperConsult.acquire();
+                        System.out.println(getName() + " was invited for a DEVELOPERS consultation");
                         beginSoftwareConsultation.release();
-                        System.out.println(getName() + " has started in a developer consultation");
+                        System.out.println(getName() + " has started in a DEVELOPERS consultation");
                         mutex.acquire();
                         availableDevelopers = 0;
                         mutex.release();
@@ -237,7 +239,7 @@ public class Company {
                     System.out.println(getName() + " has started a consultation");
                     endUserConsultation.acquire();
                     problemFound = false;
-                    System.out.println(getName() + "'s was solved.");
+                    System.out.println(getName() + "'s problem was solved.");
                 }
 
             } catch (InterruptedException e) {
