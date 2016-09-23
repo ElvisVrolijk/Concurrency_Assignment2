@@ -105,7 +105,7 @@ public class Company {
                     if (availableDevelopers > 2) {
                         inviteDeveloperForDeveloperConsult.release();
                         mutex.acquire();
-                        availableDevelopers = availableDevelopers - 3;
+                        availableDevelopers = 0;
                         mutex.release();
                         //TODO: all available developers acquire this
                         beginSoftwareConsultation.acquire();
@@ -167,7 +167,7 @@ public class Company {
                         beginSoftwareConsultation.release();
                         System.out.println(getName() + " has started in a developer consultation");
                         mutex.acquire();
-                        availableDevelopers = availableDevelopers - 2;
+                        availableDevelopers = 0;
                         mutex.release();
                         endDeveloperConsultation.acquire();
                     }
