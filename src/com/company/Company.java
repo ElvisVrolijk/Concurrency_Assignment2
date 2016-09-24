@@ -94,7 +94,6 @@ public class Company {
                         availableDevelopers--;
                         mutex.release();
                         beginUserConsultation.acquire();
-                        //TODO: all user acquire this, and ONE developer acquires this
                         //Jaap releases the invitation
                         userConsultationInvitation.release();
                         //Jaap starts the consultation
